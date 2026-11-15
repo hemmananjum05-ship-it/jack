@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#101510" />
+  <title>Up &amp; Down — Snakes &amp; Ladders</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f3f2e9;
+      --muted: #a7afa3;
+      --lime: #c9f27a;
+      --panel: rgba(26, 34, 27, .88);
+      --line: rgba(235, 243, 219, .12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--ink);
+      background: radial-gradient(ellipse at 50% 76%, #273b2b 0, #17231b 38%, #101510 78%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+    button, select { font: inherit; }
+    .app { width: min(1440px, 100%); min-height: 100vh; margin: auto; padding: 22px clamp(16px, 4vw, 56px) 28px; display: flex; flex-direction: column; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #526344; border-radius: 13px; color: var(--lime); background: #222e21; font-size: 22px; }
+    .brand-name { font-weight: 800; letter-spacing: .12em; font-size: 13px; }
+    .brand-sub { color: var(--muted); font-size: 11px; margin-top: 3px; letter-spacing: .08em; }
+    .top-note { color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+    main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: clamp(24px, 5vw, 72px); align-items: center; padding: 24px 0; }
+    .game-view { min-width: 0; position: relative; }
+    .view-label { position: absolute; z-index: 3; left: 3%; top: 0; display: flex; align-items: center; gap: 9px; color: #d3ddc8; font-size: 10px; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
+    .view-label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 12px var(--lime); }
+    .board-stage { position: relative; width: min(100%, 750px); margin: 34px auto 0; padding: 0 4% 12%; perspective: 1100px; }
+    .board-shadow { position: absolute; left: 8%; right: 8%; height: 25%; bottom: 1%; background: #030603; filter: blur(28px); opacity: .8; border-radius: 50%; }
+    .board { position: relative; width: 100%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); border: 7px solid #59462d; border-radius: 9px; background: #c5a970; box-shadow: 0 8px 0 #362c1f, 0 24px 50px #0009, inset 0 0 0 2px #dfc58e; transform: rotateX(34deg) rotateZ(-2deg); transform-style: preserve-3d; }
+    .tile { position: relative; display: flex; align-items: flex-start; justify-content: flex-start; padding: 4px; min-width: 0; border: 1px solid rgba(75, 62, 42, .20); color: rgba(40, 45, 32, .78); font-size: clamp(8px, 1.1vw, 12px); font-weight: 750; }
+    .tile:nth-child(4n+1), .tile:nth-child(4n+4) { background: #d8c38f; }
+    .tile:nth-child(4n+2), .tile:nth-child(4n+3) { background: #c8b17a; }
+    .tile.start { background: #b7cf77; color: #23331c; }
+    .tile.finish { background: #e6b96a; color: #392816; }
+    .tile .tile-tag { position: absolute; right: 4px; bottom: 4px; font-size: clamp(5px, .7vw, 8px); font-weight: 900; letter-spacing: .04em; opacity: .8; }
+    .board-art { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+    .snake { fill: none; stroke: #b84d39; stroke-width: 13; stroke-linecap: round; filter: drop-shadow(1px 3px 1px #39231988); }
+    .snake-mark { fill: #e2a56d; stroke: #6b3027; stroke-width: 3; }
+    .ladder-rail { stroke: #5f8144; stroke-width: 7; stroke-linecap: round; filter: drop-shadow(1px 2px 1px #39311e88); }
+    .ladder-rung { stroke: #a3bd68; stroke-width: 4; stroke-linecap: round; }
+    .pawn { position: absolute; z-index: 2; width: 5.2%; height: 5.2%; border-radius: 50% 50% 45% 45%; border: 2px solid #fff9; box-shadow: 0 5px 5px #31261799, inset 0 -5px 0 #0002; transform: translate(-50%, -50%); transition: left .65s cubic-bezier(.2,.8,.2,1), top .65s cubic-bezier(.2,.8,.2,1); }
+    .pawn::before { content: ""; position: absolute; width: 35%; height: 35%; border-radius: 50%; left: 32%; top: -25%; background: inherit; border: 1px solid #fff8; }
+    .pawn.p0 { background: #e46c53; } .pawn.p1 { background: #4b9ed0; } .pawn.p2 { background: #e4c64e; } .pawn.p3 { background: #a982d5; }
+    .pawn.active { z-index: 4; box-shadow: 0 0 0 4px #f4f3d288, 0 5px 8px #31261799, inset 0 -5px 0 #0002; }
+    .board-caption { display: flex; justify-content: space-between; gap: 12px; padding: 14px 5% 0; color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+    .board-caption strong { color: #d9e8ca; }
+    .side-panel { align-self: center; padding: 26px; border: 1px solid var(--line); border-radius: 20px; background: linear-gradient(145deg, rgba(38, 49, 39, .92), var(--panel)); box-shadow: 0 20px 70px #0003; }
+    .eyebrow { color: var(--lime); font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
+    h1 { margin: 10px 0 5px; font-size: clamp(27px, 3vw, 38px); line-height: 1; letter-spacing: -.05em; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .turn-card { display: flex; align-items: center; gap: 12px; margin: 24px 0 18px; padding: 13px; background: #11181199; border: 1px solid var(--line); border-radius: 13px; }
+    .turn-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: #c9f27a18; font-size: 20px; }
+    .turn-label { color: var(--muted); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+    .turn-name { margin-top: 3px; font-weight: 750; font-size: 14px; }
+    .turn-position { margin-left: auto; color: var(--lime); font-size: 12px; font-weight: 800; text-align: right; }
+    .dice-area { display: grid; place-items: center; min-height: 130px; margin: 8px 0 14px; }
+    .die { width: 86px; height: 86px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); gap: 5px; padding: 12px; border-radius: 17px; background: linear-gradient(145deg, #fffef4, #d8dbc9); box-shadow: 0 8px 0 #8e9684, 0 15px 25px #0005; transform: rotate(-8deg); transition: transform .2s; }
+    .die.rolling { animation: tumble .55s ease-in-out infinite; }
+    @keyframes tumble { 0% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(175deg) translateY(-9px); } 100% { transform: rotate(352deg) translateY(0); } }
+    .pip { align-self: center; justify-self: center; width: 12px; height: 12px; border-radius: 50%; background: #263126; opacity: 0; }
+    .pip.on { opacity: 1; }
+    .roll-button { width: 100%; border: 0; border-radius: 12px; padding: 15px 18px; background: var(--lime); color: #1b2616; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 0 #8ba94c; transition: transform .12s, filter .12s; }
+    .roll-button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .roll-button:active { transform: translateY(2px); box-shadow: 0 2px 0 #8ba94c; }
+    .roll-button:disabled { cursor: wait; filter: grayscale(.5); opacity: .75; }
+    .message { min-height: 42px; margin: 13px 0 20px; color: #d7ddce; font-size: 12px; line-height: 1.55; text-align: center; }
+    .players-heading { display: flex; justify-content: space-between; padding-bottom: 9px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .player-list { display: grid; gap: 8px; margin-top: 10px; }
+    .player-row { display: flex; align-items: center; gap: 9px; color: #d9ded3; font-size: 12px; }
+    .player-row.current { color: white; font-weight: 800; }
+    .player-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .player-row .score { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .player-row.current .score { color: var(--lime); }
+    .panel-footer { display: flex; gap: 10px; margin-top: 20px; }
+    .setting { flex: 1; min-width: 0; }
+    .setting label { display: block; margin: 0 0 6px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    select, .reset-button { width: 100%; min-height: 38px; border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; color: var(--ink); background: #111811; font-size: 11px; }
+    .reset-button { cursor: pointer; }
+    .reset-button:hover { border-color: #91aa70; }
+    .rules { margin-top: 15px; color: #8d9889; font-size: 10px; line-height: 1.5; text-align: center; }
+    footer { display: flex; justify-content: center; gap: 8px; color: #758071; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+    @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr) 270px; gap: 20px; } .side-panel { padding: 21px; } }
+    @media (max-width: 680px) { .app { padding: 16px 14px 20px; } .top-note { display: none; } main { grid-template-columns: 1fr; gap: 12px; padding: 12px 0 22px; } .board-stage { width: min(100%, 510px); margin-top: 28px; } .board { border-width: 5px; } .side-panel { width: min(100%, 510px); margin: 0 auto; padding: 20px; } .panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; } h1 { font-size: 28px; } .subtitle { max-width: 190px; text-align: right; font-size: 11px; } .turn-card { margin: 15px 0 10px; } .dice-area { min-height: 100px; } .die { width: 72px; height: 72px; padding: 10px; } .pip { width: 10px; height: 10px; } .message { min-height: 24px; margin: 9px 0 14px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand"><div class="brand-mark" aria-hidden="true">↗</div><div><div class="brand-name">FIELD TRIP GAMES</div><div class="brand-sub">A little luck. A long way up.</div></div></div>
+      <div class="top-note">A first-person board game</div>
+    </header>
+    <main>
+      <section class="game-view" aria-label="Game board view">
+        <div class="view-label">Your view · board level</div>
+        <div class="board-stage">
+          <div class="board-shadow"></div>
+          <div class="board" id="board" aria-label="Snakes and ladders board from square 1 to 100"></div>
+          <div id="pawns"></div>
+        </div>
+        <div class="board-caption"><span><strong>01</strong> · the start</span><span>Find your way up</span><span><strong>100</strong> · the summit</span></div>
+      </section>
+      <aside class="side-panel" aria-label="Game controls">
+        <div class="panel-heading"><div><div class="eyebrow">The climb</div><h1>Up &amp; Down</h1></div><p class="subtitle">Climb the ladders.<br />Watch your step.</p></div>
+        <div class="turn-card"><div class="turn-icon" aria-hidden="true">👀</div><div><div class="turn-label">It's your turn</div><div class="turn-name" id="turn-name">Player 1</div></div><div class="turn-position" id="turn-position">START<br />Square 1</div></div>
+        <div class="dice-area"><div class="die" id="die" role="img" aria-label="Dice showing 1"></div></div>
+        <button class="roll-button" id="roll-button" type="button">Roll the dice</button>
+        <p class="message" id="message" aria-live="polite">Take a breath, look ahead, and roll when you're ready.</p>
+        <div class="players-heading"><span>Players</span><span>Square</span></div>
+        <div class="player-list" id="player-list"></div>
+        <div class="panel-footer">
+          <div class="setting"><label for="player-count">Players</label><select id="player-count" aria-label="Number of players"><option value="1">1 player</option><option value="2" selected>2 players</option><option value="3">3 players</option><option value="4">4 players</option></select></div>
+          <div class="setting"><label>&nbsp;</label><button class="reset-button" id="reset-button" type="button">Start over</button></div>
+        </div>
+        <div class="rules">Roll to move. Land on a ladder to climb, or a snake to slide down. You need the exact roll to reach 100.</div>
+      </aside>
+    </main>
+    <footer><span>Take turns</span><span>·</span><span>Trust the dice</span><span>·</span><span>Mind the snakes</span></footer>
+  </div>
+  <script>
+    (() => {
+      const ladders = [[3, 22], [8, 30], [20, 41], [28, 54], [36, 57], [51, 72], [71, 92], [80, 99]];
+      const snakes = [[17, 7], [姉, 5], [47, 26], [59, 37], [62, 19], [64, 60], [87, 24], [93, 73], [95, 75], [98, 79]];
+      const colors = ['#e46c53', '#4b9ed0', '#e4c64e', '#a982d5'];
+      const board = document.getElementById('board');
+      const pawns = document.getElementById('pawns');
+      const die = document.getElementById('die');
+      const rollButton = document.getElementById('roll-button');
+      const message = document.getElementById('message');
+      const playerList = document.getElementById('player-list');
+      const playerCount = document.getElementById('player-count');
+      const turnName = document.getElementById('turn-name');
+      const turnPosition = document.getElementById('turn-position');
+      const pipPatterns = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+      let players = [];
+      let current = 0;
+      let busy = false;
+      let finished = false;
+
+      function coords(square) {
+        const n = Math.max(1, Math.min(100, square));
+        const row = Math.floor((n - 1) / 10);
+        const offset = (n - 1) % 10;
+        const col = row % 2 === 0 ? offset : 9 - offset;
+        return { x: col * 10 + 5, y: 95 - row * 10 };
+      }
+      function makeBoard() {
+        board.innerHTML = '';
+        for (let row = 9; row >= 0; row--) {
+          for (let col = 0; col < 10; col++) {
+            const offset = row % 2 === 0 ? 9 - col : col;
+            const number = row * 10 + offset + 1;
+            const tile = document.createElement('div');
+            tile.className = 'tile' + (number === 1 ? ' start' : '') + (number === 100 ? ' finish' : '');
+            tile.textContent = number;
+            if (number === 1 || number === 100) {
+              const tag = document.createElement('span'); tag.className = 'tile-tag'; tag.textContent = number === 1 ? 'START' : 'GOAL'; tile.appendChild(tag);
+            }
+            board.appendChild(tile);
+          }
+        }
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'board-art'); svg.setAttribute('viewBox', '0 0 1000 1000'); svg.setAttribute('aria-hidden', 'true');
+        ladders.forEach(([from, to], i) => {
+          const a = coords(from), b = coords(to), dx = (b.x - a.x) * 10, dy = (b.y - a.y) * 10;
+          const len = Math.hypot(dx, dy), ox = -dy / len * 12, oy = dx / len * 12;
+          [[ox, oy], [-ox, -oy]].forEach(([x, y]) => {
+            const line = document.createElementNS(svg.namespaceURI, 'line'); line.setAttribute('x1', a.x * 10 + x); line.setAttribute('y1', a.y * 10 + y); line.setAttribute('x2', b.x * 10 + x); line.setAttribute('y2', b.y * 10 + y); line.setAttribute('class', 'ladder-rail'); svg.appendChild(line);
+          });
+          for (let t = .16; t < .9; t += .16) {
+            const rung = document.createElementNS(svg.namespaceURI, 'line'); rung.setAttribute('x1', a.x * 10 + dx * t + ox); rung.setAttribute('y1', a.y * 10 + dy * t + oy); rung.setAttribute('x2', a.x * 10 + dx * t - ox); rung.setAttribute('y2', a.y * 10 + dy * t - oy); rung.setAttribute('class', 'ladder-rung'); svg.appendChild(rung);
+          }
+        });
+        snakes.forEach(([from, to], i) => {
+          const a = coords(from), b = coords(to), bend = i % 2 ? 48 : -48;
+          const midX = (a.x + b.x) * 5 + bend, midY = (a.y + b.y) * 5;
+          const path = document.createElementNS(svg.namespaceURI, 'path');
+          path.setAttribute('d', `M ${a.x * 10} ${a.y * 10} C ${a.x * 10 + bend} ${a.y * 10 + 50}, ${midX - bend} ${midY}, ${midX} ${midY} S ${b.x * 10 - bend} ${b.y * 10 - 50}, ${b.x * 10} ${b.y * 10}`);
+          path.setAttribute('class', 'snake'); svg.appendChild(path);
+          const head = document.createElementNS(svg.namespaceURI, 'circle'); head.setAttribute('cx', a.x * 10); head.setAttribute('cy', a.y * 10); head.setAttribute('r', 12); head.setAttribute('class', 'snake-mark'); svg.appendChild(head);
+          [-4, 4].forEach(dx => { const eye = document.createElementNS(svg.namespaceURI, 'circle'); eye.setAttribute('cx', a.x * 10 + dx); eye.setAttribute('cy', a.y * 10 - 2); eye.setAttribute('r', 1.7); eye.setAttribute('fill', '#3b2720'); svg.appendChild(eye); });
+        });
+        board.appendChild(svg);
+      }
+      function drawDie(value) {
+        die.innerHTML = '';
+        for (let i = 0; i < 9; i++) { const pip = document.createElement('span'); pip.className = 'pip' + (pipPatterns[value].includes(i) ? ' on' : ''); die.appendChild(pip); }
+        die.setAttribute('aria-label', `Dice showing ${value}`);
+      }
+      function setupPlayers(count) {
+        players = Array.from({ length: count }, (_, i) => ({ name: `Player ${i + 1}`, position: 1, color: colors[i] }));
+        current = 0; finished = false; busy = false;
+        pawns.innerHTML = '';
+        players.forEach((p, i) => { const pawn = document.createElement('div'); pawn.className = `pawn p${i}`; pawn.id = `pawn-${i}`; pawn.setAttribute('aria-label', `${p.name} pawn`); pawns.appendChild(pawn); });
+        drawDie(1); message.textContent = 'Take a breath, look ahead, and roll when you’re ready.'; rollButton.disabled = false;
+        render();
+      }
+      function render() {
+        players.forEach((p, i) => {
+          const point = coords(p.position), pawn = document.getElementById(`pawn-${i}`);
+          pawn.style.left = `${point.x}%`; pawn.style.top = `${point.y}%`; pawn.classList.toggle('active', i === current && !finished);
+        });
+        const active = players[current];
+        turnName.textContent = finished ? 'Game over!' : active.name;
+        turnPosition.innerHTML = `${active.position === 1 ? 'START<br />Square 1' : `SQUARE<br />${active.position}`}`;
+        playerList.innerHTML = '';
+        players.forEach((p, i) => {
+          const row = document.createElement('div'); row.className = `player-row${i === current && !finished ? ' current' : ''}`;
+          row.innerHTML = `<span class="player-dot" style="background:${p.color}"></span><span>${p.name}</span><span class="score">${p.position === 1 ? 'START' : p.position}</span>`;
+          playerList.appendChild(row);
+        });
+      }
+      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+      async function roll() {
+        if (busy || finished) return;
+        busy = true; rollButton.disabled = true; die.classList.add('rolling');
+        const value = Math.floor(Math.random() * 6) + 1;
+        for (let i = 0; i < 8; i++) { drawDie(Math.floor(Math.random() * 6) + 1); await wait(75); }
+        drawDie(value); die.classList.remove('rolling');
+        const player = players[current], oldPosition = player.position, landing = oldPosition + value;
+        if (landing > 100) {
+          message.textContent = `${player.name} rolled ${value}. You need an exact roll for the summit — stay on ${oldPosition}.`;
+        } else {
+          player.position = landing;
+          let result = `${player.name} rolled ${value} and moved to square ${landing}.`;
+          const ladder = ladders.find(([from]) => from === landing);
+          const snake = snakes.find(([from]) => from === landing);
+          if (ladder) { render(); await wait(700); player.position = ladder[1]; result = `A ladder! ${player.name} climbs from ${landing} to ${ladder[1]}.`; }
+          else if (snake) { render(); await wait(700); player.position = snake[1]; result = `Oh no, a snake! ${player.name} slides from ${landing} to ${snake[1]}.`; }
+          if (player.position === 100) { finished = true; result = `The summit! ${player.name} wins the game!`; }
+          message.textContent = result;
+        }
+        if (!finished) current = (current + 1) % players.length;
+        render();
+        busy = false; rollButton.disabled = finished;
+        if (finished) rollButton.textContent = 'Game complete';
+      }
+      rollButton.addEventListener('click', roll);
+      playerCount.addEventListener('change', () => { rollButton.textContent = 'Roll the dice'; setupPlayers(Number(playerCount.value)); });
+      document.getElementById('reset-button').addEventListener('click', () => { rollButton.textContent = 'Roll the dice'; setupPlayers(Number(playerCount.value)); });
+      makeBoard(); setupPlayers(Number(playerCount.value));
+    })();
+  </script>
+</body>
+</html>
